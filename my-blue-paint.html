@@ -6,6 +6,9 @@
     <title>Is My Blue Your Blue? (Paint Mix Edition)</title>
     <style>
         :root {
+            /* Using the constants for consistent UI styling */
+            --phtalo-green: rgb(0, 165, 80);
+            --cobalt-blue: rgb(0, 71, 171);
             --bg-color: #000; 
         }
 
@@ -19,12 +22,12 @@
             flex-direction: column;
             color: white;
             background-color: var(--bg-color);
-            overflow: hidden; /* Prevent body scroll, use container scrolls */
+            overflow: hidden;
         }
 
-        /* 1. Fixed height container for stability */
+        /* 1. Main container grows to fill space not taken by history */
         #main-container {
-            height: 60vh; 
+            flex: 1; 
             display: flex;
             justify-content: center;
             align-items: center;
@@ -65,13 +68,15 @@
 
         button:active { transform: scale(0.95); }
 
-        /* 1 & 2. Fixed size history, closed by default */
+        /* 1. History layout updates */
         details {
-            height: 40vh;
             background: #111;
             border-top: 2px solid rgba(255,255,255,0.1);
-            display: flex;
-            flex-direction: column;
+            transition: height 0.3s ease;
+        }
+
+        details[open] {
+            height: 40vh; /* Fixed height only when open */
         }
 
         summary {
@@ -82,13 +87,10 @@
             background: #1a1a1a;
             list-style: none;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
 
         #history-scroll-area {
-            height: calc(40vh - 50px); /* Adjust for summary height */
+            height: calc(40vh - 50px);
             overflow-y: auto;
         }
 
@@ -119,7 +121,10 @@
             transform: translateX(-50%);
         }
 
-        .end-cap { width: 10px; height: 10px; border-radius: 2px; }
+        /* 2. End-cap styling using CSS variables from constants */
+        .end-cap-g { width: 10px; height: 10px; border-radius: 2px; background: var(--phtalo-green); }
+        .end-cap-b { width: 10px; height: 10px; border-radius: 2px; background: var(--cobalt-blue); }
+        
         .hex-info { font-family: monospace; opacity: 0.7; }
 
         #result { display: none; }
@@ -154,8 +159,8 @@
                 <div class="history-row" style="font-weight:bold; opacity:0.5;">
                     <div>#</div>
                     <div style="display:flex; justify-content: space-between; padding: 0 15px;">
-                        <div style="display:flex; align-items:center; gap:4px;"><div class="end-cap" style="background:#00a550;"></div> G</div>
-                        <div style="display:flex; align-items:center; gap:4px;">B <div class="end-cap" style="background:#0047ab;"></div></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><div class="end-cap-g"></div> G</div>
+                        <div style="display:flex; align-items:center; gap:4px;">B <div class="end-cap-b"></div></div>
                     </div>
                     <div>Value</div>
                     <div>Choice</div>
@@ -169,12 +174,14 @@
         const PIGMENT_BLUE = { r: 0, g: 71, b: 171 };
         const PHI = (Math.sqrt(5) - 1) / 2;
         
+        // Convert constant objects to CSS-ready strings for the history text
+        const GREEN_CSS = `rgb(${PIGMENT_GREEN.r}, ${PIGMENT_GREEN.g}, ${PIGMENT_GREEN.b})`;
+        const BLUE_CSS = `rgb(${PIGMENT_BLUE.r}, ${PIGMENT_BLUE.g}, ${PIGMENT_BLUE.b})`;
+
         let minT = 0;
         let maxT = 1;
         let stepCount = 0;
         let currentT;
-        
-        // 3. Convergence tracking
         const seenHexes = new Set();
 
         function mixPaint(w) {
@@ -193,7 +200,6 @@
         }
 
         function init() {
-            // Randomized start: decidedly green or decidedly blue
             currentT = Math.random() < 0.5 ? Math.random() * 0.4 : 0.6 + Math.random() * 0.4;
             updateUI();
         }
@@ -203,8 +209,6 @@
             const hex = rgbToHex(color);
             document.documentElement.style.setProperty('--bg-color', hex);
             document.getElementById('progress').innerText = `Trial ${stepCount + 1}`;
-            
-            // Register hex for next convergence check
             seenHexes.add(hex);
         }
 
@@ -214,11 +218,14 @@
             row.className = 'history-row';
             const percentage = Math.round(tVal * 100);
             
+            // 2. Text color uses constants
+            const choiceColor = (choice === 'green') ? GREEN_CSS : BLUE_CSS;
+            
             row.innerHTML = `
                 <div>${stepCount + 1}</div>
                 <div class="spectrum-track"><div class="marker" style="left: ${percentage}%; background: ${hex};"></div></div>
                 <div class="hex-info">${hex} (${percentage}%)</div>
-                <div style="font-weight: bold; color: ${choice === 'green' ? '#4ade80' : '#60a5fa'}">${choice.toUpperCase()}</div>
+                <div style="font-weight: bold; color: ${choiceColor}">${choice.toUpperCase()}</div>
             `;
             list.appendChild(row);
             
@@ -232,7 +239,6 @@
             
             stepCount++;
 
-            // Golden Ratio Search Logic
             if (choice === 'green') {
                 minT = currentT;
                 currentT = minT + (maxT - minT) * PHI;
@@ -241,7 +247,6 @@
                 currentT = maxT - (maxT - minT) * PHI;
             }
 
-            // 3. Convergence Check: Check if new hex has been seen before
             const nextColor = mixPaint(currentT);
             const nextHex = rgbToHex(nextColor);
 
