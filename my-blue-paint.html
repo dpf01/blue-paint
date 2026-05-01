@@ -24,10 +24,11 @@
         }
 
         #ui {
-            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(25px);
             padding: 2rem; border-radius: 30px; text-align: center;
-            width: 380px; border: 1px solid rgba(255,255,255,0.1);
+            width: 420px; border: 1px solid rgba(255,255,255,0.15);
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            z-index: 10;
         }
 
         .button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
@@ -48,7 +49,7 @@
         button:active { transform: translateY(0); }
 
         /* History */
-        details { background: #0a0a0a; border-top: 2px solid #222; }
+        details { background: #0a0a0a; border-top: 2px solid #222; z-index: 20; }
         details[open] { height: 35vh; }
         summary { padding: 12px; cursor: pointer; text-align: center; background: #111; font-weight: bold; font-size: 0.9rem; }
         #scroll-area { height: calc(35vh - 45px); overflow-y: auto; }
@@ -59,33 +60,45 @@
             border-bottom: 1px solid #1a1a1a; font-size: 0.75rem;
         }
 
-        .track-container { position: relative; height: 20px; background: #222; border-radius: 10px; overflow: hidden; }
+        .track-container { position: relative; height: 20px; background: #222; border-radius: 10px; overflow: hidden; cursor: crosshair; }
         .fuzzy-boundary { 
             position: absolute; height: 100%; background: rgba(255,255,255,0.12); 
             border-left: 1px solid rgba(255,255,255,0.3); border-right: 1px solid rgba(255,255,255,0.3);
         }
         .marker {
-            position: absolute; width: 12px; height: 12px; top: 4px;
-            border: 2px solid white; border-radius: 3px; transform: translateX(-50%); z-index: 5;
+            position: absolute; width: 14px; height: 14px; top: 3px;
+            border: 2px solid white; border-radius: 4px; transform: translateX(-50%); z-index: 5;
+            transition: transform 0.1s; cursor: pointer;
         }
+        .marker:hover { transform: translateX(-50%) scale(1.3); box-shadow: 0 0 10px white; }
 
         /* Results Chart */
-        #chart { display: flex; align-items: flex-end; justify-content: space-around; height: 160px; margin-top: 30px; background: #000; border-radius: 12px; padding: 15px 10px; border: 1px solid #333; }
-        .bar { width: 15%; position: relative; transition: height 0.8s; }
-        .bar-label { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.6rem; opacity: 0.7; }
+        .chart-layout { display: flex; gap: 10px; margin-top: 30px; align-items: stretch; }
+        .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 0.6rem; opacity: 0.6; padding: 15px 0; text-align: right; width: 50px; }
+        
+        #chart { 
+            flex: 1; display: flex; align-items: flex-end; justify-content: space-around; 
+            height: 180px; background: #000; border-radius: 12px; padding: 15px 10px; 
+            border: 1px solid #333; position: relative;
+        }
+        
+        .bar { width: 14%; position: relative; transition: height 0.8s; z-index: 2; }
+        .bar-label { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.55rem; opacity: 0.7; white-space: nowrap; }
         .bar-percent { position: absolute; top: -22px; width: 100%; text-align: center; font-size: 0.75rem; font-weight: bold; }
         
+        /* Average Line */
+        .avg-line {
+            position: absolute; left: 0; width: 100%; height: 1px;
+            border-top: 1px dashed rgba(255,255,255,0.4); z-index: 1; pointer-events: none;
+        }
+        .avg-label { position: absolute; right: 5px; font-size: 0.5rem; color: rgba(255,255,255,0.5); transform: translateY(-100%); }
+
         /* Error Bars */
-        .error-bar {
-            position: absolute; left: 50%; width: 2px; background: rgba(255,255,255,0.6);
-            transform: translateX(-50%);
-        }
-        .error-cap {
-            position: absolute; left: 50%; width: 8px; height: 2px; background: rgba(255,255,255,0.6);
-            transform: translateX(-50%);
-        }
+        .error-bar { position: absolute; left: 50%; width: 2px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
+        .error-cap { position: absolute; left: 50%; width: 8px; height: 1px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
 
         #result-view { display: none; }
+        #insight-text { font-size: 0.75rem; opacity: 0.8; margin-top: 45px; line-height: 1.5; padding: 0 10px; border-left: 2px solid #444; text-align: left; }
     </style>
 </head>
 <body>
@@ -102,22 +115,31 @@
                         <button class="btn-blue" onclick="recordVote('blue')">Blue</button>
                     </div>
                     <button class="btn-unsure" onclick="recordVote('unsure')">I'm Not Sure</button>
-                    <button class="btn-stop" onclick="finish()">Stop Test & See Results</button>
+                    <button class="btn-stop" onclick="finish()">Stop & See Results</button>
                 </div>
                 <p id="progress-text" style="opacity:0.4; font-size: 0.7rem; margin-top: 20px;">Precision tracking...</p>
             </div>
 
             <div id="result-view">
                 <h2 style="margin:0">Perceptual Manifold</h2>
-                <div id="chart"></div>
-                <p style="font-size:0.7rem; opacity:0.6; margin-top:40px; line-height: 1.4;">White lines represent the boundary uncertainty range for each paint mix.</p>
-                <button onclick="location.reload()" style="margin-top:15px; width:100%; background:white; color:black; border-radius:10px;">Restart</button>
+                <div class="chart-layout">
+                    <div class="y-axis">
+                        <span>100% Blue</span>
+                        <span>75%</span>
+                        <span>50% Mid</span>
+                        <span>25%</span>
+                        <span>0% Green</span>
+                    </div>
+                    <div id="chart"></div>
+                </div>
+                <div id="insight-text"></div>
+                <button onclick="location.reload()" style="margin-top:20px; width:100%; background:white; color:black; border-radius:10px; font-weight: bold;">Restart Test</button>
             </div>
         </div>
     </div>
 
     <details>
-        <summary>View Data & Live Boundaries</summary>
+        <summary>View Data (Click Swatches to Apply Color)</summary>
         <div id="scroll-area">
             <div id="history-list"></div>
         </div>
@@ -142,7 +164,7 @@
         let tierData = TIERS.map(() => ({ min: 0, max: 1, count: 0 }));
         let history = [];
         let activeTrial = null;
-        const TARGET_WIDTH = 0.05; // Stop at 5% width
+        const TARGET_WIDTH = 0.05;
 
         function mix(ratio, white, black) {
             const mI = {
@@ -150,15 +172,11 @@
                 g: (255 - PIGMENTS.GREEN.g) * (1 - ratio) + (255 - PIGMENTS.BLUE.g) * ratio,
                 b: (255 - PIGMENTS.GREEN.b) * (1 - ratio) + (255 - PIGMENTS.BLUE.b) * ratio
             };
-            const wI = { r: 255-255, g: 255-255, b: 255-255 }; // Pigment white absorbs nothing
-            const bI = { r: 255 - PIGMENTS.BLACK.r, g: 255 - PIGMENTS.BLACK.g, b: 255 - PIGMENTS.BLACK.b };
-
             const fI = {
-                r: mI.r * (1 - white - black) + (0 * white) + (bI.r * black),
-                g: mI.g * (1 - white - black) + (0 * white) + (bI.g * black),
-                b: mI.b * (1 - white - black) + (0 * white) + (bI.b * black)
+                r: mI.r * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.r) * black),
+                g: mI.g * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.g) * black),
+                b: mI.b * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.b) * black)
             };
-
             return {
                 r: Math.max(0, Math.min(255, Math.round(255 - fI.r))),
                 g: Math.max(0, Math.min(255, Math.round(255 - fI.g))),
@@ -166,21 +184,18 @@
             };
         }
 
+        function setPageBackground(hex) {
+            document.documentElement.style.setProperty('--bg-color', hex);
+        }
+
         function pickWidestTier() {
-            // Priority 1: Pick any tier that hasn't been tested at least twice
             const untested = [];
             tierData.forEach((d, i) => { if (d.count < 1) untested.push(i); });
             if (untested.length > 0) return untested[Math.floor(Math.random() * untested.length)];
-
-            // Priority 2: Pick the tier with the largest current uncertainty (max - min)
-            let widestIdx = 0;
-            let maxWidth = -1;
+            let widestIdx = 0, maxWidth = -1;
             tierData.forEach((d, i) => {
                 const width = d.max - d.min;
-                if (width > maxWidth) {
-                    maxWidth = width;
-                    widestIdx = i;
-                }
+                if (width > maxWidth) { maxWidth = width; widestIdx = i; }
             });
             return widestIdx;
         }
@@ -189,52 +204,31 @@
             const idx = pickWidestTier();
             const tier = TIERS[idx];
             const data = tierData[idx];
-
-            let ratio;
-            // First trial for each tier: clear polarization
-            if (data.count === 0) {
-                ratio = Math.random() < 0.5 ? (Math.random() * 0.3) : (0.7 + Math.random() * 0.3);
-            } else {
-                // Focus on the current fuzzy zone with a bit of centered jitter
-                const range = data.max - data.min;
-                ratio = data.min + (range * 0.3) + (Math.random() * range * 0.4);
-            }
+            let ratio = (data.count === 0) 
+                ? (Math.random() < 0.5 ? (Math.random() * 0.3) : (0.7 + Math.random() * 0.3))
+                : data.min + ( (data.max - data.min) * 0.3) + (Math.random() * (data.max - data.min) * 0.4);
 
             ratio = Math.max(0.01, Math.min(0.99, ratio));
             const color = mix(ratio, tier.w, tier.b);
             const hex = "#" + [color.r, color.g, color.b].map(x => x.toString(16).padStart(2, '0')).join("");
-
             activeTrial = { idx, ratio, hex, tierName: tier.name };
             
-            document.documentElement.style.setProperty('--bg-color', hex);
+            setPageBackground(hex);
             document.getElementById('tier-name').innerText = tier.name;
-            
             const overallWidth = tierData.reduce((acc, d) => acc + (d.max - d.min), 0) / TIERS.length;
-            const progress = Math.min(100, Math.round((1 - overallWidth) * 100));
-            document.getElementById('progress-text').innerText = `Confidence: ${progress}% (Trial ${history.length + 1})`;
+            document.getElementById('progress-text').innerText = `Confidence: ${Math.min(100, Math.round((1 - overallWidth) * 100))}% (Trial ${history.length + 1})`;
         }
 
         function recordVote(choice) {
             const d = tierData[activeTrial.idx];
-            
-            // Soft-clamping updates to allow for human noise
-            if (choice === 'green') {
-                d.min = d.min + (activeTrial.ratio - d.min) * 0.75;
-            } else if (choice === 'blue') {
-                d.max = d.max - (d.max - activeTrial.ratio) * 0.75;
-            } else {
-                // Unsure: gently push both bounds inward to center on this ratio
-                d.min = d.min + (activeTrial.ratio - d.min) * 0.15;
-                d.max = d.max - (d.max - activeTrial.ratio) * 0.15;
-            }
+            if (choice === 'green') d.min = d.min + (activeTrial.ratio - d.min) * 0.75;
+            else if (choice === 'blue') d.max = d.max - (d.max - activeTrial.ratio) * 0.75;
+            else { d.min += (activeTrial.ratio - d.min) * 0.15; d.max -= (d.max - activeTrial.ratio) * 0.15; }
 
             d.count++;
             addHistoryRow(activeTrial, choice, { ...d });
             history.push({ ...activeTrial, choice });
-
-            // Termination Check
-            const widest = Math.max(...tierData.map(t => t.max - t.min));
-            if (widest <= TARGET_WIDTH) finish();
+            if (Math.max(...tierData.map(t => t.max - t.min)) <= TARGET_WIDTH) finish();
             else spawnTrial();
         }
 
@@ -242,16 +236,17 @@
             const list = document.getElementById('history-list');
             const row = document.createElement('div');
             row.className = 'history-row';
-            
             const choiceColor = choice === 'green' ? 'var(--phtalo-green)' : (choice === 'blue' ? 'var(--cobalt-blue)' : '#777');
-            const left = boundaryState.min * 100;
-            const width = (boundaryState.max - boundaryState.min) * 100;
-
+            const pct = Math.round(trial.ratio * 100);
+            
             row.innerHTML = `
                 <div style="font-size:0.6rem; opacity:0.6; text-transform:uppercase;">${trial.tierName}</div>
                 <div class="track-container">
-                    <div class="fuzzy-boundary" style="left: ${left}%; width: ${width}%;"></div>
-                    <div class="marker" style="left: ${trial.ratio * 100}%; background: ${trial.hex};"></div>
+                    <div class="fuzzy-boundary" style="left: ${boundaryState.min * 100}%; width: ${(boundaryState.max - boundaryState.min) * 100}%;"></div>
+                    <div class="marker" 
+                         title="${pct}% Blue-ward" 
+                         onclick="setPageBackground('${trial.hex}')"
+                         style="left: ${trial.ratio * 100}%; background: ${trial.hex};"></div>
                 </div>
                 <div style="text-align:right; font-weight:bold; color:${choiceColor}">${choice.toUpperCase()}</div>
             `;
@@ -264,8 +259,10 @@
             const chart = document.getElementById('chart');
             chart.innerHTML = '';
 
+            let totalBoundaries = 0;
             tierData.forEach((d, i) => {
                 const midpoint = (d.min + d.max) / 2;
+                totalBoundaries += midpoint;
                 const c = mix(midpoint, TIERS[i].w, TIERS[i].b);
                 
                 const barWrapper = document.createElement('div');
@@ -273,32 +270,41 @@
                 barWrapper.style.height = `${midpoint * 100}%`;
                 barWrapper.style.background = `rgb(${c.r},${c.g},${c.b})`;
                 
-                // Error Bars (representing final min/max)
                 const errorBar = document.createElement('div');
                 errorBar.className = 'error-bar';
-                const errHeight = (d.max - d.min) * 100;
-                // Position so error bar centers on top of bar
-                errorBar.style.height = `${errHeight}%`;
+                errorBar.style.height = `${(d.max - d.min) * 100}%`;
                 errorBar.style.bottom = `calc(100% - ${(d.max - midpoint) * 100}%)`;
+                errorBar.innerHTML = `<div class="error-cap" style="top:0"></div><div class="error-cap" style="bottom:0"></div>`;
                 
-                const topCap = document.createElement('div');
-                topCap.className = 'error-cap';
-                topCap.style.top = '0';
-                
-                const botCap = document.createElement('div');
-                botCap.className = 'error-cap';
-                botCap.style.bottom = '0';
-                
-                errorBar.appendChild(topCap);
-                errorBar.appendChild(botCap);
-                
-                barWrapper.innerHTML = `
-                    <div class="bar-label">${TIERS[i].name}</div>
-                    <div class="bar-percent">${Math.round(midpoint * 100)}%</div>
-                `;
+                barWrapper.innerHTML = `<div class="bar-label">${TIERS[i].name}</div><div class="bar-percent">${Math.round(midpoint * 100)}%</div>`;
                 barWrapper.appendChild(errorBar);
                 chart.appendChild(barWrapper);
             });
+
+            const avg = totalBoundaries / TIERS.length;
+            const avgLine = document.createElement('div');
+            avgLine.className = 'avg-line';
+            avgLine.style.bottom = `${avg * 100}%`;
+            avgLine.innerHTML = `<span class="avg-label">Avg: ${Math.round(avg*100)}%</span>`;
+            chart.appendChild(avgLine);
+
+            generateInsight(avg);
+        }
+
+        function generateInsight(avg) {
+            const tintAvg = ( (tierData[0].min + tierData[0].max)/2 + (tierData[1].min + tierData[1].max)/2 ) / 2;
+            const shadeAvg = ( (tierData[3].min + tierData[3].max)/2 + (tierData[4].min + tierData[4].max)/2 ) / 2;
+            const diff = shadeAvg - tintAvg;
+
+            let text = `Your overall boundary is <strong>${Math.round(avg*100)}%</strong>. `;
+            if (Math.abs(diff) < 0.04) {
+                text += "Your perception is very consistent; you see the blue/green boundary at the same point regardless of how light or dark the paint is.";
+            } else if (diff > 0) {
+                text += "You exhibit a <strong>shade-drift</strong>: you perceive darker colors as greener. You require more blue pigment in a dark mix before you stop calling it 'green'.";
+            } else {
+                text += "You exhibit a <strong>tint-drift</strong>: you perceive lighter colors as greener. Pale turquoises look 'green' to you even when they contain significant blue.";
+            }
+            document.getElementById('insight-text').innerHTML = text;
         }
 
         spawnTrial();
