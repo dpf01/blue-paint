@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Is My Blue Your Blue? (Paint Edition)</title>
+    <title>Is My Blue Your Blue? (Paint Mix Edition)</title>
     <style>
         :root {
-            --bg-color: #00a550; /* Initial Phthalo Green-ish */
+            --bg-color: #000; 
         }
 
         body, html {
@@ -14,145 +14,224 @@
             padding: 0;
             height: 100%;
             width: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             transition: background-color 0.4s ease;
             display: flex;
             flex-direction: column;
+            color: white;
+        }
+
+        #main-container {
+            flex: 1;
+            display: flex;
             justify-content: center;
             align-items: center;
         }
 
         #ui {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: 2rem;
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            padding: 2.5rem;
+            border-radius: 24px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            color: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
             max-width: 90%;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-
-        h1 { margin-top: 0; font-weight: 300; letter-spacing: 1px; }
 
         .button-container {
             display: flex;
             gap: 20px;
-            margin-top: 20px;
+            margin-top: 25px;
         }
 
         button {
-            padding: 15px 40px;
-            font-size: 1.2rem;
+            padding: 15px 45px;
+            font-size: 1.1rem;
             border: none;
             border-radius: 50px;
             cursor: pointer;
             transition: transform 0.1s, background 0.2s;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: #111;
             background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         button:active { transform: scale(0.95); }
-        button:hover { background: #f0f0f0; }
 
-        #result {
-            display: none;
+        /* History Section */
+        details {
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            width: 100%;
+            max-height: 40vh;
+            overflow-y: auto;
         }
 
-        .hex-display {
+        summary {
+            padding: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            list-style: none;
+            background: rgba(255,255,255,0.05);
+        }
+
+        summary:hover { background: rgba(255,255,255,0.1); }
+
+        .history-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 180px 80px;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .spectrum-track {
+            position: relative;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin: 0 20px;
+        }
+
+        .marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 2px;
+            border: 2px solid white;
+            border-radius: 4px;
+            transform: translateX(-50%);
+        }
+
+        .end-cap {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .hex-info {
             font-family: monospace;
-            display: block;
-            margin-top: 10px;
-            font-size: 1.5rem;
+            opacity: 0.8;
         }
 
-        #progress {
-            margin-top: 15px;
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
+        #result { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div id="quiz">
-            <h1>Is this color Blue or Green?</h1>
-            <div class="button-container">
-                <button onclick="vote('green')">Green</button>
-                <button onclick="vote('blue')">Blue</button>
+    <div id="main-container">
+        <div id="ui">
+            <div id="quiz">
+                <h1 style="margin:0 0 10px 0;">Is this Blue or Green?</h1>
+                <p id="progress" style="opacity:0.7; margin-bottom:20px;">Trial 1 / 12</p>
+                <div class="button-container">
+                    <button onclick="vote('green')">Green</button>
+                    <button onclick="vote('blue')">Blue</button>
+                </div>
             </div>
-            <div id="progress">Trial 1 / 12</div>
-        </div>
 
-        <div id="result">
-            <h1>Your Boundary Color:</h1>
-            <span id="boundary-hex" class="hex-display">#000000</span>
-            <p id="description"></p>
-            <button onclick="resetTest()" style="margin-top:20px;">Try Again</button>
+            <div id="result">
+                <h1>Boundary Found</h1>
+                <div id="final-hex" style="font-size: 2rem; font-family: monospace; margin-bottom:10px;"></div>
+                <p id="description"></p>
+                <button onclick="location.reload()" style="margin-top:20px;">Restart</button>
+            </div>
         </div>
     </div>
 
-    <script>
-        // Define our "Paints" (Physical-inspired RGB values)
-        // Green: Phthalo Green/Emerald style
-        const PIGMENT_GREEN = { r: 0, g: 165, b: 80 }; 
-        // Blue: Cobalt/Ultramarine style
-        const PIGMENT_BLUE = { r: 0, g: 71, b: 171 };
+    <details open>
+        <summary>View Evaluation History</summary>
+        <div id="history-list">
+            <div class="history-row" style="font-weight:bold; opacity:0.6; padding-bottom:5px;">
+                <div>Trial</div>
+                <div style="display:flex; justify-content: space-between; padding: 0 20px;">
+                    <div style="display:flex; align-items:center; gap:5px;"><div class="end-cap" style="background:#00a550;"></div> Green</div>
+                    <div style="display:flex; align-items:center; gap:5px;">Blue <div class="end-cap" style="background:#0047ab;"></div></div>
+                </div>
+                <div>Value</div>
+                <div>Choice</div>
+            </div>
+            </div>
+    </details>
 
-        const PHI = (Math.sqrt(5) - 1) / 2; // ~0.618
-        
-        let minT = 0; // 0 = Pure Green
-        let maxT = 1; // 1 = Pure Blue
-        let currentT = 0.5;
-        let stepCount = 0;
+    <script>
+        const PIGMENT_GREEN = { r: 0, g: 165, b: 80 }; 
+        const PIGMENT_BLUE = { r: 0, g: 71, b: 171 };
+        const PHI = (Math.sqrt(5) - 1) / 2;
         const MAX_STEPS = 12;
 
-        function updateColor() {
-            const color = mixPaint(PIGMENT_GREEN, PIGMENT_BLUE, currentT);
-            const hex = rgbToHex(color.r, color.g, color.b);
+        let minT = 0;
+        let maxT = 1;
+        let stepCount = 0;
+        let currentT;
+
+        // 1. Randomized Initial Start
+        function init() {
+            const isGreenStart = Math.random() < 0.5;
+            if (isGreenStart) {
+                currentT = Math.random() * 0.4; // 0 to 0.4
+            } else {
+                currentT = 0.6 + Math.random() * 0.4; // 0.6 to 1.0
+            }
+            updateScreen();
+        }
+
+        function mixPaint(w) {
+            const w1 = 1 - w;
+            const c1 = { r: 255 - PIGMENT_GREEN.r, g: 255 - PIGMENT_GREEN.g, b: 255 - PIGMENT_GREEN.b };
+            const c2 = { r: 255 - PIGMENT_BLUE.r, g: 255 - PIGMENT_BLUE.g, b: 255 - PIGMENT_BLUE.b };
+            
+            const mixed = {
+                r: Math.round(255 - (c1.r * w1 + c2.r * w)),
+                g: Math.round(255 - (c1.g * w1 + c2.g * w)),
+                b: Math.round(255 - (c1.b * w1 + c2.b * w))
+            };
+            return mixed;
+        }
+
+        function rgbToHex(rgb) {
+            return "#" + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join("");
+        }
+
+        function updateScreen() {
+            const color = mixPaint(currentT);
+            const hex = rgbToHex(color);
             document.documentElement.style.setProperty('--bg-color', hex);
             document.getElementById('progress').innerText = `Trial ${stepCount + 1} / ${MAX_STEPS}`;
         }
 
-        /**
-         * Simulates Subtractive (Paint) Mixing
-         * Uses the CMY-inspired approach: averaging the inverted RGB values
-         */
-        function mixPaint(color1, color2, weight) {
-            // weight 0 = all color1, weight 1 = all color2
-            const w1 = 1 - weight;
-            const w2 = weight;
-
-            // Convert to "Pigment/Subtractive" space (Invert RGB)
-            const c1 = { r: 255 - color1.r, g: 255 - color1.g, b: 255 - color1.b };
-            const c2 = { r: 255 - color2.r, g: 255 - color2.g, b: 255 - color2.b };
-
-            // Mix pigments linearly
-            const mixedC = {
-                r: (c1.r * w1) + (c2.r * w2),
-                g: (c1.g * w1) + (c2.g * w2),
-                b: (c1.b * w1) + (c2.b * w2)
-            };
-
-            // Invert back to RGB
-            return {
-                r: Math.round(255 - mixedC.r),
-                g: Math.round(255 - mixedC.g),
-                b: Math.round(255 - mixedC.b)
-            };
+        function addHistoryRow(choice, tVal, hex) {
+            const list = document.getElementById('history-list');
+            const row = document.createElement('div');
+            row.className = 'history-row';
+            
+            const percentage = Math.round(tVal * 100);
+            
+            row.innerHTML = `
+                <div>#${stepCount}</div>
+                <div class="spectrum-track">
+                    <div class="marker" style="left: ${percentage}%; background: ${hex};"></div>
+                </div>
+                <div class="hex-info">${hex} (${percentage}%)</div>
+                <div style="text-transform: capitalize; font-weight: bold; color: ${choice === 'green' ? '#4ade80' : '#60a5fa'}">${choice}</div>
+            `;
+            list.appendChild(row);
+            // Auto-scroll history to bottom
+            const details = document.querySelector('details');
+            details.scrollTop = details.scrollHeight;
         }
 
         function vote(choice) {
+            const color = mixPaint(currentT);
+            const hex = rgbToHex(color);
             stepCount++;
+            
+            addHistoryRow(choice, currentT, hex);
 
-            // Golden Ratio Search Logic
-            // If they pick Green, the boundary is "Bluer" (increase minT)
-            // If they pick Blue, the boundary is "Greener" (decrease maxT)
             if (choice === 'green') {
                 minT = currentT;
                 currentT = minT + (maxT - minT) * PHI;
@@ -164,47 +243,20 @@
             if (stepCount >= MAX_STEPS) {
                 showResult();
             } else {
-                updateColor();
+                updateScreen();
             }
         }
 
         function showResult() {
             document.getElementById('quiz').style.display = 'none';
             document.getElementById('result').style.display = 'block';
-            
-            const finalColor = mixPaint(PIGMENT_GREEN, PIGMENT_BLUE, currentT);
-            const hex = rgbToHex(finalColor.r, finalColor.g, finalColor.b);
-            
-            document.getElementById('boundary-hex').innerText = hex;
-            document.getElementById('boundary-hex').style.color = (finalColor.r*0.299 + finalColor.g*0.587 + finalColor.b*0.114) > 128 ? 'black' : 'white';
-            
-            let msg = "";
-            if (currentT < 0.4) msg = "Your boundary leans towards Green. You see blue where others see green.";
-            else if (currentT > 0.6) msg = "Your boundary leans towards Blue. You see green where others see blue.";
-            else msg = "Your boundary is almost exactly in the center of the paint spectrum.";
-            
-            document.getElementById('description').innerText = msg;
+            const finalColor = mixPaint(currentT);
+            const hex = rgbToHex(finalColor);
+            document.getElementById('final-hex').innerText = hex;
+            document.getElementById('description').innerText = `Your personal blue-green paint boundary is at ${Math.round(currentT * 100)}% on the spectrum.`;
         }
 
-        function resetTest() {
-            minT = 0;
-            maxT = 1;
-            currentT = 0.5;
-            stepCount = 0;
-            document.getElementById('quiz').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
-            updateColor();
-        }
-
-        function rgbToHex(r, g, b) {
-            return "#" + [r, g, b].map(x => {
-                const hex = x.toString(16);
-                return hex.length === 1 ? "0" + hex : hex;
-            }).join("");
-        }
-
-        // Initialize
-        updateColor();
+        init();
     </script>
 </body>
 </html>
