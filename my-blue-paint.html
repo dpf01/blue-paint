@@ -46,7 +46,7 @@
         button:active { transform: translateY(0); }
 
         /* History */
-        details { background: #0a0a0a; border-top: 2px solid #222; transition: height 0.3s; }
+        details { background: #0a0a0a; border-top: 2px solid #222; }
         details[open] { height: 40vh; }
         summary { padding: 12px; cursor: pointer; text-align: center; background: #111; font-weight: bold; }
         
@@ -58,12 +58,11 @@
             border-bottom: 1px solid #1a1a1a; font-size: 0.8rem;
         }
 
-        /* Spectrum Track */
         .track-container { position: relative; height: 24px; background: #222; border-radius: 12px; overflow: hidden; }
         .fuzzy-boundary { 
-            position: absolute; height: 100%; background: rgba(255,255,255,0.1); 
-            border-left: 1px solid rgba(255,255,255,0.3);
-            border-right: 1px solid rgba(255,255,255,0.3);
+            position: absolute; height: 100%; background: rgba(255,255,255,0.15); 
+            border-left: 1px solid rgba(255,255,255,0.4);
+            border-right: 1px solid rgba(255,255,255,0.4);
         }
         .marker {
             position: absolute; width: 14px; height: 14px; top: 5px;
@@ -72,9 +71,10 @@
         }
 
         /* Result Graph */
-        #chart { display: flex; align-items: flex-end; justify-content: space-around; height: 140px; margin-top: 20px; background: #000; border-radius: 12px; padding: 10px; }
-        .bar { width: 15%; position: relative; transition: height 0.8s ease-out; }
-        .bar-label { position: absolute; top: -18px; width: 100%; text-align: center; font-size: 0.6rem; opacity: 0.7; }
+        #chart { display: flex; align-items: flex-end; justify-content: space-around; height: 140px; margin-top: 25px; background: #000; border-radius: 12px; padding: 10px; border: 1px solid #333; }
+        .bar { width: 16%; position: relative; transition: height 0.8s ease-out; }
+        .bar-label { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 0.6rem; opacity: 0.8; white-space: nowrap;}
+        .bar-percent { position: absolute; bottom: 5px; width: 100%; text-align: center; font-size: 0.7rem; font-weight: bold; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
         #result-view { display: none; }
     </style>
@@ -84,7 +84,7 @@
     <div id="main-container">
         <div id="ui">
             <div id="quiz-view">
-                <h2 id="tier-name" style="margin:0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; color: #aaa;">Vibrant</h2>
+                <h2 id="tier-name" style="margin:0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #aaa;">-</h2>
                 <h1 style="margin: 5px 0 20px 0; font-size: 1.5rem;">Blue or Green?</h1>
                 
                 <div class="button-stack">
@@ -100,14 +100,14 @@
             <div id="result-view">
                 <h2 style="margin:0">Manifold Result</h2>
                 <div id="chart"></div>
-                <p style="font-size:0.75rem; opacity:0.6; margin-top:15px; line-height: 1.4;">Bars show your green/blue boundary. Taller bars mean you see more green at that lightness.</p>
-                <button onclick="location.reload()" style="margin-top:10px; width:100%; background:white; color:black;">Restart</button>
+                <p style="font-size:0.75rem; opacity:0.6; margin-top:20px; line-height: 1.4;">Bars indicate your green/blue threshold. Higher bars mean you perceive more green at that level.</p>
+                <button onclick="location.reload()" style="margin-top:15px; width:100%; background:white; color:black;">Restart</button>
             </div>
         </div>
     </div>
 
     <details>
-        <summary>View Perceptual History</summary>
+        <summary>View History & Boundaries</summary>
         <div id="scroll-area">
             <div id="history-list"></div>
         </div>
@@ -122,8 +122,8 @@
         };
 
         const TIERS = [
-            { name: 'Tint (Max)', w: 0.7, b: 0 },
-            { name: 'Tint (Mid)', w: 0.35, b: 0 },
+            { name: 'Tint (Max)', w: 0.45, b: 0 },  /* Reduced white from 0.7 to 0.45 */
+            { name: 'Tint (Mid)', w: 0.22, b: 0 },
             { name: 'Pure', w: 0, b: 0 },
             { name: 'Shade (Mid)', w: 0, b: 0.35 },
             { name: 'Shade (Max)', w: 0, b: 0.7 }
@@ -157,7 +157,6 @@
         }
 
         function pickTier() {
-            // Pick from tiers with the lowest trial count
             const minCount = Math.min(...tierData.map(d => d.count));
             const candidates = [];
             tierData.forEach((d, i) => { if (d.count === minCount) candidates.push(i); });
@@ -170,15 +169,18 @@
             const data = tierData[idx];
 
             let ratio;
+            // First time in this tier? Decide between clearly green or clearly blue.
             if (data.count === 0) {
-                ratio = 0.5; // Start middle
+                ratio = Math.random() < 0.5 ? (Math.random() * 0.35) : (0.65 + Math.random() * 0.35);
             } else {
                 const range = data.max - data.min;
-                const jitter = (Math.random() - 0.5) * (range * 0.4); 
-                ratio = ((data.min + data.max) / 2) + jitter;
+                const mid = (data.min + data.max) / 2;
+                // Jitter around the center of the current fuzzy bounds
+                const jitter = (Math.random() - 0.5) * (range * 0.5); 
+                ratio = mid + jitter;
             }
 
-            ratio = Math.max(0.05, Math.min(0.95, ratio));
+            ratio = Math.max(0.02, Math.min(0.98, ratio));
             const color = mix(ratio, tier.w, tier.b);
             const hex = "#" + [color.r, color.g, color.b].map(x => x.toString(16).padStart(2, '0')).join("");
 
@@ -192,15 +194,20 @@
         function recordVote(choice) {
             const d = tierData[activeTrial.idx];
             
-            // Fuzzy logic update
+            // Adjusted "Fuzzy" Logic:
+            // Instead of jumping to the click point, we nudge the bounds to allow for exploration.
             if (choice === 'green') {
-                d.min = Math.max(d.min, activeTrial.ratio * 0.9);
+                // User said Green: the boundary is likely bluer than this.
+                // Move min up by 70% of the distance to the point.
+                d.min = d.min + (activeTrial.ratio - d.min) * 0.7;
             } else if (choice === 'blue') {
-                d.max = Math.min(d.max, 1 - (1 - activeTrial.ratio) * 0.9);
+                // User said Blue: the boundary is likely greener than this.
+                // Move max down by 70% of the distance to the point.
+                d.max = d.max - (d.max - activeTrial.ratio) * 0.7;
             } else {
-                // Unsure pulls bounds in much more gently
-                d.min = Math.max(d.min, activeTrial.ratio - 0.15);
-                d.max = Math.min(d.max, activeTrial.ratio + 0.15);
+                // "Unsure" vote: Nudge both slightly to center the boundary on this spot.
+                d.min = d.min + (activeTrial.ratio - d.min) * 0.15;
+                d.max = d.max - (d.max - activeTrial.ratio) * 0.15;
             }
 
             d.count++;
@@ -221,12 +228,12 @@
             const width = (boundaryState.max - boundaryState.min) * 100;
 
             row.innerHTML = `
-                <div style="font-size:0.65rem; opacity:0.6;">${trial.tierName}</div>
+                <div style="font-size:0.6rem; opacity:0.6; text-transform:uppercase;">${trial.tierName}</div>
                 <div class="track-container">
                     <div class="fuzzy-boundary" style="left: ${left}%; width: ${width}%;"></div>
                     <div class="marker" style="left: ${trial.ratio * 100}%; background: ${trial.hex};"></div>
                 </div>
-                <div style="text-align:right; font-weight:bold; color:${choiceColor}">${choice.toUpperCase()}</div>
+                <div style="text-align:right; font-weight:bold; font-size:0.7rem; color:${choiceColor}">${choice.toUpperCase()}</div>
             `;
             list.prepend(row);
         }
@@ -243,7 +250,12 @@
                 bar.className = 'bar';
                 bar.style.height = `${finalRatio * 100}%`;
                 bar.style.background = `rgb(${c.r},${c.g},${c.b})`;
-                bar.innerHTML = `<div class="bar-label">${TIERS[i].name}</div>`;
+                
+                const percent = Math.round(finalRatio * 100);
+                bar.innerHTML = `
+                    <div class="bar-label">${TIERS[i].name}</div>
+                    <div class="bar-percent">${percent}%</div>
+                `;
                 chart.appendChild(bar);
             });
         }
