@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Is My Blue Your Blue? (Paint Edition)</title>
+    <style>
+        :root {
+            --bg-color: #00a550; /* Initial Phthalo Green-ish */
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            transition: background-color 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #ui {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            color: white;
+            max-width: 90%;
+        }
+
+        h1 { margin-top: 0; font-weight: 300; letter-spacing: 1px; }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            font-weight: 600;
+            color: #333;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        button:active { transform: scale(0.95); }
+        button:hover { background: #f0f0f0; }
+
+        #result {
+            display: none;
+        }
+
+        .hex-display {
+            font-family: monospace;
+            display: block;
+            margin-top: 10px;
+            font-size: 1.5rem;
+        }
+
+        #progress {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div id="quiz">
+            <h1>Is this color Blue or Green?</h1>
+            <div class="button-container">
+                <button onclick="vote('green')">Green</button>
+                <button onclick="vote('blue')">Blue</button>
+            </div>
+            <div id="progress">Trial 1 / 12</div>
+        </div>
+
+        <div id="result">
+            <h1>Your Boundary Color:</h1>
+            <span id="boundary-hex" class="hex-display">#000000</span>
+            <p id="description"></p>
+            <button onclick="resetTest()" style="margin-top:20px;">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Define our "Paints" (Physical-inspired RGB values)
+        // Green: Phthalo Green/Emerald style
+        const PIGMENT_GREEN = { r: 0, g: 165, b: 80 }; 
+        // Blue: Cobalt/Ultramarine style
+        const PIGMENT_BLUE = { r: 0, g: 71, b: 171 };
+
+        const PHI = (Math.sqrt(5) - 1) / 2; // ~0.618
+        
+        let minT = 0; // 0 = Pure Green
+        let maxT = 1; // 1 = Pure Blue
+        let currentT = 0.5;
+        let stepCount = 0;
+        const MAX_STEPS = 12;
+
+        function updateColor() {
+            const color = mixPaint(PIGMENT_GREEN, PIGMENT_BLUE, currentT);
+            const hex = rgbToHex(color.r, color.g, color.b);
+            document.documentElement.style.setProperty('--bg-color', hex);
+            document.getElementById('progress').innerText = `Trial ${stepCount + 1} / ${MAX_STEPS}`;
+        }
+
+        /**
+         * Simulates Subtractive (Paint) Mixing
+         * Uses the CMY-inspired approach: averaging the inverted RGB values
+         */
+        function mixPaint(color1, color2, weight) {
+            // weight 0 = all color1, weight 1 = all color2
+            const w1 = 1 - weight;
+            const w2 = weight;
+
+            // Convert to "Pigment/Subtractive" space (Invert RGB)
+            const c1 = { r: 255 - color1.r, g: 255 - color1.g, b: 255 - color1.b };
+            const c2 = { r: 255 - color2.r, g: 255 - color2.g, b: 255 - color2.b };
+
+            // Mix pigments linearly
+            const mixedC = {
+                r: (c1.r * w1) + (c2.r * w2),
+                g: (c1.g * w1) + (c2.g * w2),
+                b: (c1.b * w1) + (c2.b * w2)
+            };
+
+            // Invert back to RGB
+            return {
+                r: Math.round(255 - mixedC.r),
+                g: Math.round(255 - mixedC.g),
+                b: Math.round(255 - mixedC.b)
+            };
+        }
+
+        function vote(choice) {
+            stepCount++;
+
+            // Golden Ratio Search Logic
+            // If they pick Green, the boundary is "Bluer" (increase minT)
+            // If they pick Blue, the boundary is "Greener" (decrease maxT)
+            if (choice === 'green') {
+                minT = currentT;
+                currentT = minT + (maxT - minT) * PHI;
+            } else {
+                maxT = currentT;
+                currentT = maxT - (maxT - minT) * PHI;
+            }
+
+            if (stepCount >= MAX_STEPS) {
+                showResult();
+            } else {
+                updateColor();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('result').style.display = 'block';
+            
+            const finalColor = mixPaint(PIGMENT_GREEN, PIGMENT_BLUE, currentT);
+            const hex = rgbToHex(finalColor.r, finalColor.g, finalColor.b);
+            
+            document.getElementById('boundary-hex').innerText = hex;
+            document.getElementById('boundary-hex').style.color = (finalColor.r*0.299 + finalColor.g*0.587 + finalColor.b*0.114) > 128 ? 'black' : 'white';
+            
+            let msg = "";
+            if (currentT < 0.4) msg = "Your boundary leans towards Green. You see blue where others see green.";
+            else if (currentT > 0.6) msg = "Your boundary leans towards Blue. You see green where others see blue.";
+            else msg = "Your boundary is almost exactly in the center of the paint spectrum.";
+            
+            document.getElementById('description').innerText = msg;
+        }
+
+        function resetTest() {
+            minT = 0;
+            maxT = 1;
+            currentT = 0.5;
+            stepCount = 0;
+            document.getElementById('quiz').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            updateColor();
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            }).join("");
+        }
+
+        // Initialize
+        updateColor();
+    </script>
+</body>
+</html>
