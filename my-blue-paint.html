@@ -3,274 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Is My Blue Your Blue? (Paint Mix Edition)</title>
+    <title>Perceptual Paint Manifold</title>
     <style>
         :root {
-            /* Using the constants for consistent UI styling */
             --phtalo-green: rgb(0, 165, 80);
             --cobalt-blue: rgb(0, 71, 171);
-            --bg-color: #000; 
+            --bg-color: #222;
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            flex-direction: column;
-            color: white;
-            background-color: var(--bg-color);
-            overflow: hidden;
+            margin: 0; padding: 0; height: 100vh; width: 100%;
+            font-family: -apple-system, system-ui, sans-serif;
+            display: flex; flex-direction: column; color: white;
+            background-color: var(--bg-color); overflow: hidden;
         }
 
-        /* 1. Main container grows to fill space not taken by history */
         #main-container {
-            flex: 1; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background-color 0.4s ease;
-            background-color: var(--bg-color);
-            position: relative;
+            flex: 1; display: flex; justify-content: center; align-items: center;
+            transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #ui {
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(15px);
-            padding: 2rem;
-            border-radius: 24px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            width: 320px;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px);
+            padding: 2rem; border-radius: 30px; text-align: center;
+            width: 380px; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
-        .button-container {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            font-size: 1rem;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
-            font-weight: 700;
-            color: #111;
-            background: white;
-        }
-
-        button:active { transform: scale(0.95); }
-
-        /* 1. History layout updates */
-        details {
-            background: #111;
-            border-top: 2px solid rgba(255,255,255,0.1);
-            transition: height 0.3s ease;
-        }
-
-        details[open] {
-            height: 40vh; /* Fixed height only when open */
-        }
-
-        summary {
-            padding: 15px;
-            cursor: pointer;
-            font-weight: bold;
-            text-align: center;
-            background: #1a1a1a;
-            list-style: none;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        #history-scroll-area {
-            height: calc(40vh - 50px);
-            overflow-y: auto;
-        }
-
-        .history-row {
-            display: grid;
-            grid-template-columns: 50px 1fr 140px 70px;
-            align-items: center;
-            padding: 8px 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 0.85rem;
-        }
-
-        .spectrum-track {
-            position: relative;
-            height: 18px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 9px;
-            margin: 0 15px;
-        }
-
-        .marker {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            top: 2px;
-            border: 1px solid white;
-            border-radius: 3px;
-            transform: translateX(-50%);
-        }
-
-        /* 2. End-cap styling using CSS variables from constants */
-        .end-cap-g { width: 10px; height: 10px; border-radius: 2px; background: var(--phtalo-green); }
-        .end-cap-b { width: 10px; height: 10px; border-radius: 2px; background: var(--cobalt-blue); }
+        .button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .row { display: flex; gap: 10px; }
         
-        .hex-info { font-family: monospace; opacity: 0.7; }
+        button {
+            flex: 1; padding: 15px; border: none; border-radius: 15px;
+            cursor: pointer; font-weight: 700; transition: all 0.2s;
+            font-size: 1rem;
+        }
 
-        #result { display: none; }
+        .btn-green { background: var(--phtalo-green); color: white; }
+        .btn-blue { background: var(--cobalt-blue); color: white; }
+        .btn-unsure { background: #444; color: #ccc; }
+        button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        button:active { transform: translateY(0); }
+
+        /* History & Results */
+        details { background: #111; border-top: 1px solid #333; }
+        details[open] { height: 45vh; }
+        summary { padding: 15px; cursor: pointer; text-align: center; background: #1a1a1a; font-weight: bold; }
+        
+        #scroll-area { height: calc(45vh - 50px); overflow-y: auto; padding: 10px; }
+
+        .history-grid {
+            display: grid; grid-template-columns: 40px 60px 1fr 80px;
+            gap: 10px; align-items: center; padding: 8px;
+            border-bottom: 1px solid #222; font-size: 0.8rem;
+        }
+
+        .swatch { width: 100%; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* Results Graph */
+        #chart-container {
+            margin-top: 20px; height: 150px; position: relative;
+            background: #000; border-radius: 10px; border: 1px solid #333;
+            overflow: hidden;
+        }
+        .chart-line {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: flex-end; justify-content: space-around;
+        }
+        .chart-bar { width: 20%; background: white; transition: height 0.5s; position: relative; }
+        .chart-label { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 0.7rem; }
+        
+        #result-view { display: none; }
     </style>
 </head>
 <body>
 
     <div id="main-container">
         <div id="ui">
-            <div id="quiz">
-                <h2 style="margin:0 0 5px 0;">Blue or Green?</h2>
-                <p id="progress" style="opacity:0.6; margin: 0 0 20px 0; font-size: 0.9rem;">Trial 1</p>
-                <div class="button-container">
-                    <button onclick="vote('green')">Green</button>
-                    <button onclick="vote('blue')">Blue</button>
+            <div id="quiz-view">
+                <h2 style="margin:0">Is this Blue or Green?</h2>
+                <p id="progress" style="opacity:0.5; font-size: 0.8rem;">Trial 1</p>
+                
+                <div class="button-stack">
+                    <div class="row">
+                        <button class="btn-green" onclick="recordVote('green')">Green</button>
+                        <button class="btn-blue" onclick="recordVote('blue')">Blue</button>
+                    </div>
+                    <button class="btn-unsure" onclick="recordVote('unsure')">I'm Not Sure</button>
                 </div>
             </div>
 
-            <div id="result">
-                <h3>Boundary Found</h3>
-                <div id="final-hex" style="font-size: 1.8rem; font-family: monospace; margin-bottom:5px;"></div>
-                <p id="description" style="font-size: 0.9rem; opacity: 0.8;"></p>
-                <button onclick="location.reload()" style="margin-top:15px; width: 100%;">Restart</button>
+            <div id="result-view">
+                <h3>Your Perceptual Manifold</h3>
+                <div id="chart-container">
+                    <div class="chart-line" id="manifold-bars">
+                        <!-- Bars generated by JS -->
+                    </div>
+                </div>
+                <p style="font-size:0.7rem; opacity:0.6; margin-top:10px;">The bars show your "Green" threshold at different lightness levels.</p>
+                <button onclick="location.reload()" style="margin-top:15px; width:100%; background:white; color:black;">Restart Test</button>
             </div>
         </div>
     </div>
 
     <details>
-        <summary>View History</summary>
-        <div id="history-scroll-area">
-            <div id="history-list">
-                <div class="history-row" style="font-weight:bold; opacity:0.5;">
-                    <div>#</div>
-                    <div style="display:flex; justify-content: space-between; padding: 0 15px;">
-                        <div style="display:flex; align-items:center; gap:4px;"><div class="end-cap-g"></div> G</div>
-                        <div style="display:flex; align-items:center; gap:4px;">B <div class="end-cap-b"></div></div>
-                    </div>
-                    <div>Value</div>
-                    <div>Choice</div>
-                </div>
-            </div>
+        <summary>View Data Points</summary>
+        <div id="scroll-area">
+            <div id="history-list"></div>
         </div>
     </details>
 
     <script>
-        const PIGMENT_GREEN = { r: 0, g: 165, b: 80 }; 
-        const PIGMENT_BLUE = { r: 0, g: 71, b: 171 };
-        const PHI = (Math.sqrt(5) - 1) / 2;
-        
-        // Convert constant objects to CSS-ready strings for the history text
-        const GREEN_CSS = `rgb(${PIGMENT_GREEN.r}, ${PIGMENT_GREEN.g}, ${PIGMENT_GREEN.b})`;
-        const BLUE_CSS = `rgb(${PIGMENT_BLUE.r}, ${PIGMENT_BLUE.g}, ${PIGMENT_BLUE.b})`;
+        const PIGMENTS = {
+            GREEN: { r: 0, g: 165, b: 80 },
+            BLUE: { r: 0, g: 71, b: 171 },
+            WHITE: { r: 255, g: 255, b: 255 },
+            BLACK: { r: 15, g: 15, b: 15 } // Lamp Black
+        };
 
-        let minT = 0;
-        let maxT = 1;
-        let stepCount = 0;
-        let currentT;
-        const seenHexes = new Set();
+        const TIERS = [
+            { name: 'Light (Tint)', w: 0.4, b: 0, l: 0.5 },
+            { name: 'Vibrant (Pure)', w: 0, b: 0, l: 0 },
+            { name: 'Dark (Shade)', w: 0, b: 0.4, l: -0.5 }
+        ];
 
-        function mixPaint(w) {
-            const w1 = 1 - w;
-            const c1 = { r: 255 - PIGMENT_GREEN.r, g: 255 - PIGMENT_GREEN.g, b: 255 - PIGMENT_GREEN.b };
-            const c2 = { r: 255 - PIGMENT_BLUE.r, g: 255 - PIGMENT_BLUE.g, b: 255 - PIGMENT_BLUE.b };
-            return {
-                r: Math.round(255 - (c1.r * w1 + c2.r * w)),
-                g: Math.round(255 - (c1.g * w1 + c2.g * w)),
-                b: Math.round(255 - (c1.b * w1 + c2.b * w))
+        let trials = [];
+        let currentTrial = 0;
+        const MAX_TRIALS = 18; 
+
+        // State for active sampling
+        let tierBounds = TIERS.map(() => ({ min: 0, max: 1 }));
+
+        function mix(mixRatio, whiteAmount, blackAmount) {
+            // Subtractive Mix
+            const mixInv = {
+                r: (255 - PIGMENTS.GREEN.r) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.r) * mixRatio,
+                g: (255 - PIGMENTS.GREEN.g) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.g) * mixRatio,
+                b: (255 - PIGMENTS.GREEN.b) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.b) * mixRatio
             };
+
+            const whiteInv = { r: 255 - PIGMENTS.WHITE.r, g: 255 - PIGMENTS.WHITE.g, b: 255 - PIGMENTS.WHITE.b };
+            const blackInv = { r: 255 - PIGMENTS.BLACK.r, g: 255 - PIGMENTS.BLACK.g, b: 255 - PIGMENTS.BLACK.b };
+
+            // Apply modifiers
+            const finalInv = {
+                r: mixInv.r * (1 - whiteAmount - blackAmount) + (whiteInv.r * whiteAmount) + (blackInv.r * blackAmount),
+                g: mixInv.g * (1 - whiteAmount - blackAmount) + (whiteInv.g * whiteAmount) + (blackInv.g * blackAmount),
+                b: mixInv.b * (1 - whiteAmount - blackAmount) + (whiteInv.b * whiteAmount) + (blackInv.b * blackAmount)
+            };
+
+            return {
+                r: Math.max(0, Math.min(255, Math.round(255 - finalInv.r))),
+                g: Math.max(0, Math.min(255, Math.round(255 - finalInv.g))),
+                b: Math.max(0, Math.min(255, Math.round(255 - finalInv.b)))
+            };
+        }
+
+        function getNextTrial() {
+            // Cycle through tiers
+            const tierIdx = currentTrial % TIERS.length;
+            const tier = TIERS[tierIdx];
+            const bounds = tierBounds[tierIdx];
+
+            // Option D: Biased sampling
+            // In the first few rounds, go wider. Later, narrow in on bounds.
+            let ratio;
+            if (currentTrial < 3) {
+                // Calibration phase
+                ratio = [0.1, 0.9, 0.5][currentTrial];
+            } else {
+                // Focus near current estimated midpoint with 20% jitter
+                const mid = (bounds.min + bounds.max) / 2;
+                const range = (bounds.max - bounds.min);
+                ratio = mid + (Math.random() - 0.5) * range;
+            }
+
+            ratio = Math.max(0.05, Math.min(0.95, ratio));
+            const color = mix(ratio, tier.w, tier.b);
+            return { ratio, tierIdx, color, hex: rgbToHex(color) };
+        }
+
+        let activeTrial = null;
+
+        function updateDisplay() {
+            activeTrial = getNextTrial();
+            document.documentElement.style.setProperty('--bg-color', activeTrial.hex);
+            document.getElementById('progress').innerText = `Trial ${currentTrial + 1} / ${MAX_TRIALS}`;
+        }
+
+        function recordVote(choice) {
+            const t = activeTrial;
+            trials.push({ ...t, choice });
+
+            // Update Tier Bounds (Non-linear dampening for "I'm Not Sure")
+            const bounds = tierBounds[t.tierIdx];
+            if (choice === 'green') {
+                // If they say green, the boundary is at least this blue
+                bounds.min = Math.max(bounds.min, t.ratio * 0.85); 
+            } else if (choice === 'blue') {
+                // If they say blue, the boundary is at least this green
+                bounds.max = Math.min(bounds.max, 1 - (1 - t.ratio) * 0.85);
+            } else {
+                // "Unsure" nudges both slightly inward but doesn't lock them
+                bounds.min = Math.max(bounds.min, t.ratio - 0.1);
+                bounds.max = Math.min(bounds.max, t.ratio + 0.1);
+            }
+
+            addHistoryRow(t, choice);
+            currentTrial++;
+
+            if (currentTrial >= MAX_TRIALS) finish();
+            else updateDisplay();
+        }
+
+        function addHistoryRow(t, choice) {
+            const list = document.getElementById('history-list');
+            const row = document.createElement('div');
+            row.className = 'history-grid';
+            const tierName = TIERS[t.tierIdx].name.split(' ')[0];
+            const colorLabel = choice === 'unsure' ? '#aaa' : (choice === 'green' ? 'var(--phtalo-green)' : 'var(--cobalt-blue)');
+            
+            row.innerHTML = `
+                <div style="opacity:0.5">#${currentTrial+1}</div>
+                <div style="font-size:0.7rem">${tierName}</div>
+                <div class="swatch" style="background:${t.hex}"></div>
+                <div style="color:${colorLabel}; font-weight:bold">${choice.toUpperCase()}</div>
+            `;
+            list.prepend(row);
+        }
+
+        function calculateBoundaries() {
+            return TIERS.map((tier, idx) => {
+                const relevant = trials.filter(tr => tr.tierIdx === idx);
+                const greens = relevant.filter(r => r.choice === 'green').map(r => r.ratio);
+                const blues = relevant.filter(r => r.choice === 'blue').map(r => r.ratio);
+                
+                const highGreen = greens.length ? Math.max(...greens) : 0;
+                const lowBlue = blues.length ? Math.min(...blues) : 1;
+                
+                return (highGreen + lowBlue) / 2;
+            });
+        }
+
+        function finish() {
+            document.getElementById('quiz-view').style.display = 'none';
+            document.getElementById('result-view').style.display = 'block';
+            
+            const results = calculateBoundaries();
+            const manifold = document.getElementById('manifold-bars');
+            manifold.innerHTML = '';
+
+            results.forEach((val, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = `${val * 100}%`;
+                // Color bar based on its own tier color
+                const c = mix(val, TIERS[i].w, TIERS[i].b);
+                bar.style.background = `rgb(${c.r}, ${c.g}, ${c.b})`;
+                bar.innerHTML = `<div class="chart-label">${TIERS[i].name}<br>${Math.round(val*100)}%</div>`;
+                manifold.appendChild(bar);
+            });
         }
 
         function rgbToHex(rgb) {
             return "#" + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join("");
         }
 
-        function init() {
-            currentT = Math.random() < 0.5 ? Math.random() * 0.4 : 0.6 + Math.random() * 0.4;
-            updateUI();
-        }
-
-        function updateUI() {
-            const color = mixPaint(currentT);
-            const hex = rgbToHex(color);
-            document.documentElement.style.setProperty('--bg-color', hex);
-            document.getElementById('progress').innerText = `Trial ${stepCount + 1}`;
-            seenHexes.add(hex);
-        }
-
-        function addHistoryRow(choice, tVal, hex) {
-            const list = document.getElementById('history-list');
-            const row = document.createElement('div');
-            row.className = 'history-row';
-            const percentage = Math.round(tVal * 100);
-            
-            // 2. Text color uses constants
-            const choiceColor = (choice === 'green') ? GREEN_CSS : BLUE_CSS;
-            
-            row.innerHTML = `
-                <div>${stepCount + 1}</div>
-                <div class="spectrum-track"><div class="marker" style="left: ${percentage}%; background: ${hex};"></div></div>
-                <div class="hex-info">${hex} (${percentage}%)</div>
-                <div style="font-weight: bold; color: ${choiceColor}">${choice.toUpperCase()}</div>
-            `;
-            list.appendChild(row);
-            
-            const scrollArea = document.getElementById('history-scroll-area');
-            scrollArea.scrollTop = scrollArea.scrollHeight;
-        }
-
-        function vote(choice) {
-            const currentHex = rgbToHex(mixPaint(currentT));
-            addHistoryRow(choice, currentT, currentHex);
-            
-            stepCount++;
-
-            if (choice === 'green') {
-                minT = currentT;
-                currentT = minT + (maxT - minT) * PHI;
-            } else {
-                maxT = currentT;
-                currentT = maxT - (maxT - minT) * PHI;
-            }
-
-            const nextColor = mixPaint(currentT);
-            const nextHex = rgbToHex(nextColor);
-
-            if (seenHexes.has(nextHex) || stepCount >= 20) {
-                showResult();
-            } else {
-                updateUI();
-            }
-        }
-
-        function showResult() {
-            document.getElementById('quiz').style.display = 'none';
-            document.getElementById('result').style.display = 'block';
-            const finalColor = mixPaint(currentT);
-            const finalHex = rgbToHex(finalColor);
-            
-            document.getElementById('final-hex').innerText = finalHex;
-            document.getElementById('description').innerText = 
-                `The search converged at ${Math.round(currentT * 100)}% on the paint spectrum after ${stepCount} trials.`;
-            
-            document.documentElement.style.setProperty('--bg-color', finalHex);
-        }
-
-        init();
+        updateDisplay();
     </script>
 </body>
 </html>
