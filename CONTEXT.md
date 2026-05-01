@@ -11,7 +11,7 @@ Because "teal" is a perceptual battleground, this tool uses a scientific approac
 
 ### 1. The Color Engine
 *   **Pigment Anchors:**
-    *   **Phtalo Green:** `rgb(0, 165, 80)`
+    *   **Phthalo Green:** `rgb(0, 165, 80)`
     *   **Cobalt Blue:** `rgb(0, 71, 171)`
     *   **Black (Carbon):** `rgb(15, 15, 15)`
 *   **Subtractive Pigment Model:** Simulates physical paint mixing by inverting RGB values to their CMY-like subtractive equivalents before processing.
@@ -51,8 +51,25 @@ Because "teal" is a perceptual battleground, this tool uses a scientific approac
 
 ---
 
+## Design & Coding Practices
+
+### 1. Single Source of Truth for Colors
+*   **CSS Variables:** All pigment colors and UI themes are defined in the `:root` block of the CSS. 
+*   **Runtime Access:** JavaScript retrieves these values via `getComputedStyle` to ensure that physical mixing logic stays perfectly synchronized with the visual UI.
+
+### 2. Separation of Concerns
+*   **Style:** All visual styling must reside within `<style>` blocks or external CSS. Inline `style` attributes are avoided to maintain a clean HTML structure.
+*   **Logic:** JavaScript functions are extracted into small, focused helpers (e.g., `invertColor`, `sample`) to improve readability and testability.
+
+### 3. Documentation Strategy
+*   **Code Comments:** Comments focus on **why** a specific logic or threshold exists (e.g., the purpose of fuzzy boundaries or polarization in early trials), rather than describing **what** the code is doing.
+*   **Context Alignment:** This `CONTEXT.md` file is the primary source of architectural truth. Major logic changes should be reflected here.
+
+---
+
 ## Key Variables for Context
 *   **Target Precision:** 5%
 *   **Trial Cap:** None (Variable based on user consistency).
 *   **Stop Trigger:** User-initiated or auto-convergence.
+
 

@@ -7,8 +7,10 @@
     <title>Is my blue paint your blue paint?</title>
     <style>
         :root {
-            --phtalo-green: rgb(0, 165, 80);
+            --phthalo-green: rgb(0, 165, 80);
             --cobalt-blue: rgb(0, 71, 171);
+            --carbon-black: rgb(15, 15, 15);
+            --titanium-white: rgb(255, 255, 255);
             --bg-color: #1a1a1a;
         }
 
@@ -32,6 +34,38 @@
             z-index: 10;
         }
 
+        #tier-name {
+            margin: 0;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #aaa;
+        }
+
+        #quiz-view h1 {
+            margin: 5px 0 20px 0;
+            font-size: 1.5rem;
+        }
+
+        #progress-text {
+            opacity: 0.4;
+            font-size: 0.7rem;
+            margin-top: 20px;
+        }
+
+        #result-view h2 {
+            margin: 0;
+        }
+
+        .btn-restart {
+            margin-top: 20px;
+            width: 100%;
+            background: white;
+            color: black;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
         .button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
         .row { display: flex; gap: 10px; }
         
@@ -41,7 +75,7 @@
             font-size: 1rem;
         }
 
-        .btn-green { background: var(--phtalo-green); color: white; }
+        .btn-green { background: var(--phthalo-green); color: white; }
         .btn-blue { background: var(--cobalt-blue); color: white; }
         .btn-unsure { background: #333; color: #bbb; border: 1px solid #444; }
         .btn-stop { background: transparent; color: #ff4444; border: 1px solid #ff4444; margin-top: 10px; font-size: 0.8rem; padding: 8px; }
@@ -59,6 +93,17 @@
             display: grid; grid-template-columns: 80px 1fr 80px;
             gap: 15px; align-items: center; padding: 10px 20px;
             border-bottom: 1px solid #1a1a1a; font-size: 0.75rem;
+        }
+
+        .history-tier {
+            font-size: 0.6rem;
+            opacity: 0.6;
+            text-transform: uppercase;
+        }
+
+        .history-vote {
+            text-align: right;
+            font-weight: bold;
         }
 
         .track-container { position: relative; height: 20px; background: #222; border-radius: 10px; overflow: hidden; cursor: crosshair; }
@@ -107,8 +152,8 @@
     <div id="main-container">
         <div id="ui">
             <div id="quiz-view">
-                <h2 id="tier-name" style="margin:0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #aaa;">-</h2>
-                <h1 style="margin: 5px 0 20px 0; font-size: 1.5rem;">Blue or Green?</h1>
+                <h2 id="tier-name">-</h2>
+                <h1>Blue or Green?</h1>
                 
                 <div class="button-stack">
                     <div class="row">
@@ -118,11 +163,11 @@
                     <button class="btn-unsure" onclick="recordVote('unsure')">I'm Not Sure</button>
                     <button class="btn-stop" onclick="finish()">Stop & See Results</button>
                 </div>
-                <p id="progress-text" style="opacity:0.4; font-size: 0.7rem; margin-top: 20px;">Precision tracking...</p>
+                <p id="progress-text">Precision tracking...</p>
             </div>
 
             <div id="result-view">
-                <h2 style="margin:0">Perceptual Manifold</h2>
+                <h2>Perceptual Manifold</h2>
                 <div class="chart-layout">
                     <div class="y-axis">
                         <span>100% Blue</span>
@@ -134,7 +179,7 @@
                     <div id="chart"></div>
                 </div>
                 <div id="insight-text"></div>
-                <button onclick="location.reload()" style="margin-top:20px; width:100%; background:white; color:black; border-radius:10px; font-weight: bold;">Restart Test</button>
+                <button class="btn-restart" onclick="location.reload()">Restart Test</button>
             </div>
         </div>
     </div>
@@ -147,11 +192,24 @@
     </details>
 
     <script>
+        /**
+         * The PIGMENTS object defines the physical anchors for our subtractive model.
+         * We pull these from CSS variables to ensure a single source of truth for 
+         * brand colors across the stylesheet and engine.
+         */
+        const styles = getComputedStyle(document.documentElement);
+        const parseRGB = (val) => {
+            const matches = val.match(/\d+/g);
+            if (!matches) return { r: 0, g: 0, b: 0 };
+            const [r, g, b] = matches.map(Number);
+            return { r, g, b };
+        };
+
         const PIGMENTS = {
-            GREEN: { r: 0, g: 165, b: 80 },
-            BLUE: { r: 0, g: 71, b: 171 },
-            WHITE: { r: 255, g: 255, b: 255 },
-            BLACK: { r: 15, g: 15, b: 15 }
+            PHTHALO_GREEN: parseRGB(styles.getPropertyValue('--phthalo-green')),
+            COBALT_BLUE: parseRGB(styles.getPropertyValue('--cobalt-blue')),
+            BLACK: parseRGB(styles.getPropertyValue('--carbon-black')),
+            WHITE: parseRGB(styles.getPropertyValue('--titanium-white'))
         };
 
         const TIERS = [
@@ -167,21 +225,74 @@
         let activeTrial = null;
         const TARGET_WIDTH = 0.05;
 
-        function mix(ratio, white, black) {
-            const mI = {
-                r: (255 - PIGMENTS.GREEN.r) * (1 - ratio) + (255 - PIGMENTS.BLUE.r) * ratio,
-                g: (255 - PIGMENTS.GREEN.g) * (1 - ratio) + (255 - PIGMENTS.BLUE.g) * ratio,
-                b: (255 - PIGMENTS.GREEN.b) * (1 - ratio) + (255 - PIGMENTS.BLUE.b) * ratio
-            };
-            const fI = {
-                r: mI.r * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.r) * black),
-                g: mI.g * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.g) * black),
-                b: mI.b * (1 - white - black) + (0 * white) + ((255 - PIGMENTS.BLACK.b) * black)
-            };
+        /**
+         * Inverts a color to its subtractive (CMY-like) equivalent.
+         * Subtractive mixing logic is easier to calculate when 0 represents 
+         * 'no pigment' and 255 represents 'full pigment'.
+         */
+        function invertColor(rgb) {
             return {
-                r: Math.max(0, Math.min(255, Math.round(255 - fI.r))),
-                g: Math.max(0, Math.min(255, Math.round(255 - fI.g))),
-                b: Math.max(0, Math.min(255, Math.round(255 - fI.b)))
+                r: 255 - rgb.r,
+                g: 255 - rgb.g,
+                b: 255 - rgb.b
+            };
+        }
+
+        /**
+         * Scales a color by a specific ratio.
+         */
+        function sample(color, ratio) {
+            return {
+                r: color.r * ratio,
+                g: color.g * ratio,
+                b: color.b * ratio
+            };
+        }
+
+        /**
+         * Adds two colors together (additive in the inverted space).
+         */
+        function addColors(c1, c2) {
+            return {
+                r: c1.r + c2.r,
+                g: c1.g + c2.g,
+                b: c1.b + c2.b
+            };
+        }
+
+        /**
+         * Simulates physical paint mixing by calculating proportions in the 
+         * inverted (subtractive) color space.
+         */
+        function mix(ratio, white, black) {
+            // First, mix the primary pigment anchors (Green and Blue)
+            const invertedGreen = invertColor(PIGMENTS.PHTHALO_GREEN);
+            const invertedBlue = invertColor(PIGMENTS.COBALT_BLUE);
+            
+            const baseMix = addColors(
+                sample(invertedGreen, 1 - ratio),
+                sample(invertedBlue, ratio)
+            );
+
+            // Then, dilute or darken the mix with White and Black pigments.
+            // Note: white + black + (1 - white - black) = 1 (total volume)
+            const remainingVolume = 1 - white - black;
+            const invertedWhite = invertColor(PIGMENTS.WHITE);
+            const invertedBlack = invertColor(PIGMENTS.BLACK);
+
+            const finalInverted = addColors(
+                addColors(
+                    sample(baseMix, remainingVolume),
+                    sample(invertedWhite, white)
+                ),
+                sample(invertedBlack, black)
+            );
+
+            // Revert to standard RGB for display.
+            return {
+                r: Math.max(0, Math.min(255, Math.round(255 - finalInverted.r))),
+                g: Math.max(0, Math.min(255, Math.round(255 - finalInverted.g))),
+                b: Math.max(0, Math.min(255, Math.round(255 - finalInverted.b)))
             };
         }
 
@@ -193,6 +304,7 @@
             const untested = [];
             tierData.forEach((d, i) => { if (d.count < 1) untested.push(i); });
             if (untested.length > 0) return untested[Math.floor(Math.random() * untested.length)];
+            
             let widestIdx = 0, maxWidth = -1;
             tierData.forEach((d, i) => {
                 const width = d.max - d.min;
@@ -205,9 +317,25 @@
             const idx = pickWidestTier();
             const tier = TIERS[idx];
             const data = tierData[idx];
-            let ratio = (data.count === 0) 
-                ? (Math.random() < 0.5 ? (Math.random() * 0.3) : (0.7 + Math.random() * 0.3))
-                : data.min + ( (data.max - data.min) * 0.3) + (Math.random() * (data.max - data.min) * 0.4);
+            
+            let ratio;
+            if (data.count === 0) {
+                // For the first trial in a tier, we want to polarize the choice
+                // to establish clear bounds early.
+                const isGreenLeaning = Math.random() < 0.5;
+                if (isGreenLeaning) {
+                    ratio = Math.random() * 0.3; // 0% to 30% Blue
+                } else {
+                    ratio = 0.7 + Math.random() * 0.3; // 70% to 100% Blue
+                }
+            } else {
+                // Subsequent trials focus on the 'fuzzy zone' between the current
+                // identified boundaries, with a slight randomized jitter to
+                // avoid predictability and explore the space.
+                const range = data.max - data.min;
+                const jitter = (Math.random() * 0.4) + 0.3; // Random point within 30-70% of the range
+                ratio = data.min + (range * jitter);
+            }
 
             ratio = Math.max(0.01, Math.min(0.99, ratio));
             const color = mix(ratio, tier.w, tier.b);
@@ -222,9 +350,22 @@
 
         function recordVote(choice) {
             const d = tierData[activeTrial.idx];
-            if (choice === 'green') d.min = d.min + (activeTrial.ratio - d.min) * 0.75;
-            else if (choice === 'blue') d.max = d.max - (d.max - activeTrial.ratio) * 0.75;
-            else { d.min += (activeTrial.ratio - d.min) * 0.15; d.max -= (d.max - activeTrial.ratio) * 0.15; }
+            
+            /**
+             * We use a 'Fuzzy Binary Search' approach. Instead of snapping the
+             * boundary directly to the trial ratio, we move it 75% of the way.
+             * This provides a 'cushion' against user mis-clicks or momentary
+             * indecision, allowing the manifold to converge more naturally.
+             */
+            if (choice === 'green') {
+                d.min = d.min + (activeTrial.ratio - d.min) * 0.75;
+            } else if (choice === 'blue') {
+                d.max = d.max - (d.max - activeTrial.ratio) * 0.75;
+            } else {
+                // For 'unsure' votes, we gently nudge both boundaries inwards.
+                d.min += (activeTrial.ratio - d.min) * 0.15;
+                d.max -= (d.max - activeTrial.ratio) * 0.15;
+            }
 
             d.count++;
             addHistoryRow(activeTrial, choice, { ...d });
@@ -237,11 +378,11 @@
             const list = document.getElementById('history-list');
             const row = document.createElement('div');
             row.className = 'history-row';
-            const choiceColor = choice === 'green' ? 'var(--phtalo-green)' : (choice === 'blue' ? 'var(--cobalt-blue)' : '#777');
+            const choiceColor = choice === 'green' ? 'var(--phthalo-green)' : (choice === 'blue' ? 'var(--cobalt-blue)' : '#777');
             const pct = Math.round(trial.ratio * 100);
             
             row.innerHTML = `
-                <div style="font-size:0.6rem; opacity:0.6; text-transform:uppercase;">${trial.tierName}</div>
+                <div class="history-tier">${trial.tierName}</div>
                 <div class="track-container">
                     <div class="fuzzy-boundary" style="left: ${boundaryState.min * 100}%; width: ${(boundaryState.max - boundaryState.min) * 100}%;"></div>
                     <div class="marker" 
@@ -249,7 +390,7 @@
                          onclick="setPageBackground('${trial.hex}')"
                          style="left: ${trial.ratio * 100}%; background: ${trial.hex};"></div>
                 </div>
-                <div style="text-align:right; font-weight:bold; color:${choiceColor}">${choice.toUpperCase()}</div>
+                <div class="history-vote" style="color:${choiceColor}">${choice.toUpperCase()}</div>
             `;
             list.prepend(row);
         }
