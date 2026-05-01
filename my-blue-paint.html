@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perceptual Paint Manifold</title>
+    <title>Paint Manifold: 5-Tier Boundary</title>
     <style>
         :root {
             --phtalo-green: rgb(0, 165, 80);
             --cobalt-blue: rgb(0, 71, 171);
-            --bg-color: #222;
+            --bg-color: #1a1a1a;
         }
 
         body, html {
@@ -20,59 +20,62 @@
 
         #main-container {
             flex: 1; display: flex; justify-content: center; align-items: center;
-            transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color 0.6s ease;
         }
 
         #ui {
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);
             padding: 2rem; border-radius: 30px; text-align: center;
             width: 380px; border: 1px solid rgba(255,255,255,0.1);
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
-        .button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .row { display: flex; gap: 10px; }
+        .button-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
+        .row { display: flex; gap: 12px; }
         
         button {
-            flex: 1; padding: 15px; border: none; border-radius: 15px;
+            flex: 1; padding: 16px; border: none; border-radius: 14px;
             cursor: pointer; font-weight: 700; transition: all 0.2s;
-            font-size: 1rem;
+            font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .btn-green { background: var(--phtalo-green); color: white; }
         .btn-blue { background: var(--cobalt-blue); color: white; }
-        .btn-unsure { background: #444; color: #ccc; }
+        .btn-unsure { background: #333; color: #bbb; border: 1px solid #444; }
         button:hover { transform: translateY(-2px); filter: brightness(1.1); }
         button:active { transform: translateY(0); }
 
-        /* History & Results */
-        details { background: #111; border-top: 1px solid #333; }
-        details[open] { height: 45vh; }
-        summary { padding: 15px; cursor: pointer; text-align: center; background: #1a1a1a; font-weight: bold; }
+        /* History */
+        details { background: #0a0a0a; border-top: 2px solid #222; transition: height 0.3s; }
+        details[open] { height: 40vh; }
+        summary { padding: 12px; cursor: pointer; text-align: center; background: #111; font-weight: bold; }
         
-        #scroll-area { height: calc(45vh - 50px); overflow-y: auto; padding: 10px; }
+        #scroll-area { height: calc(40vh - 45px); overflow-y: auto; }
 
-        .history-grid {
-            display: grid; grid-template-columns: 40px 60px 1fr 80px;
-            gap: 10px; align-items: center; padding: 8px;
-            border-bottom: 1px solid #222; font-size: 0.8rem;
+        .history-row {
+            display: grid; grid-template-columns: 80px 1fr 90px;
+            gap: 15px; align-items: center; padding: 12px 20px;
+            border-bottom: 1px solid #1a1a1a; font-size: 0.8rem;
         }
 
-        .swatch { width: 100%; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+        /* Spectrum Track */
+        .track-container { position: relative; height: 24px; background: #222; border-radius: 12px; overflow: hidden; }
+        .fuzzy-boundary { 
+            position: absolute; height: 100%; background: rgba(255,255,255,0.1); 
+            border-left: 1px solid rgba(255,255,255,0.3);
+            border-right: 1px solid rgba(255,255,255,0.3);
+        }
+        .marker {
+            position: absolute; width: 14px; height: 14px; top: 5px;
+            border: 2px solid white; border-radius: 4px; transform: translateX(-50%);
+            z-index: 5;
+        }
 
-        /* Results Graph */
-        #chart-container {
-            margin-top: 20px; height: 150px; position: relative;
-            background: #000; border-radius: 10px; border: 1px solid #333;
-            overflow: hidden;
-        }
-        .chart-line {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: flex-end; justify-content: space-around;
-        }
-        .chart-bar { width: 20%; background: white; transition: height 0.5s; position: relative; }
-        .chart-label { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 0.7rem; }
-        
+        /* Result Graph */
+        #chart { display: flex; align-items: flex-end; justify-content: space-around; height: 140px; margin-top: 20px; background: #000; border-radius: 12px; padding: 10px; }
+        .bar { width: 15%; position: relative; transition: height 0.8s ease-out; }
+        .bar-label { position: absolute; top: -18px; width: 100%; text-align: center; font-size: 0.6rem; opacity: 0.7; }
+
         #result-view { display: none; }
     </style>
 </head>
@@ -81,8 +84,8 @@
     <div id="main-container">
         <div id="ui">
             <div id="quiz-view">
-                <h2 style="margin:0">Is this Blue or Green?</h2>
-                <p id="progress" style="opacity:0.5; font-size: 0.8rem;">Trial 1</p>
+                <h2 id="tier-name" style="margin:0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; color: #aaa;">Vibrant</h2>
+                <h1 style="margin: 5px 0 20px 0; font-size: 1.5rem;">Blue or Green?</h1>
                 
                 <div class="button-stack">
                     <div class="row">
@@ -91,23 +94,20 @@
                     </div>
                     <button class="btn-unsure" onclick="recordVote('unsure')">I'm Not Sure</button>
                 </div>
+                <p id="progress" style="opacity:0.4; font-size: 0.7rem; margin-top: 20px;">Trial 1 / 25</p>
             </div>
 
             <div id="result-view">
-                <h3>Your Perceptual Manifold</h3>
-                <div id="chart-container">
-                    <div class="chart-line" id="manifold-bars">
-                        <!-- Bars generated by JS -->
-                    </div>
-                </div>
-                <p style="font-size:0.7rem; opacity:0.6; margin-top:10px;">The bars show your "Green" threshold at different lightness levels.</p>
-                <button onclick="location.reload()" style="margin-top:15px; width:100%; background:white; color:black;">Restart Test</button>
+                <h2 style="margin:0">Manifold Result</h2>
+                <div id="chart"></div>
+                <p style="font-size:0.75rem; opacity:0.6; margin-top:15px; line-height: 1.4;">Bars show your green/blue boundary. Taller bars mean you see more green at that lightness.</p>
+                <button onclick="location.reload()" style="margin-top:10px; width:100%; background:white; color:black;">Restart</button>
             </div>
         </div>
     </div>
 
     <details>
-        <summary>View Data Points</summary>
+        <summary>View Perceptual History</summary>
         <div id="scroll-area">
             <div id="history-list"></div>
         </div>
@@ -118,158 +118,137 @@
             GREEN: { r: 0, g: 165, b: 80 },
             BLUE: { r: 0, g: 71, b: 171 },
             WHITE: { r: 255, g: 255, b: 255 },
-            BLACK: { r: 15, g: 15, b: 15 } // Lamp Black
+            BLACK: { r: 15, g: 15, b: 15 }
         };
 
         const TIERS = [
-            { name: 'Light (Tint)', w: 0.4, b: 0, l: 0.5 },
-            { name: 'Vibrant (Pure)', w: 0, b: 0, l: 0 },
-            { name: 'Dark (Shade)', w: 0, b: 0.4, l: -0.5 }
+            { name: 'Tint (Max)', w: 0.7, b: 0 },
+            { name: 'Tint (Mid)', w: 0.35, b: 0 },
+            { name: 'Pure', w: 0, b: 0 },
+            { name: 'Shade (Mid)', w: 0, b: 0.35 },
+            { name: 'Shade (Max)', w: 0, b: 0.7 }
         ];
 
-        let trials = [];
-        let currentTrial = 0;
-        const MAX_TRIALS = 18; 
+        let tierData = TIERS.map(() => ({ min: 0, max: 1, count: 0 }));
+        let history = [];
+        let activeTrial = null;
+        const MAX_TRIALS = 25;
 
-        // State for active sampling
-        let tierBounds = TIERS.map(() => ({ min: 0, max: 1 }));
-
-        function mix(mixRatio, whiteAmount, blackAmount) {
-            // Subtractive Mix
-            const mixInv = {
-                r: (255 - PIGMENTS.GREEN.r) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.r) * mixRatio,
-                g: (255 - PIGMENTS.GREEN.g) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.g) * mixRatio,
-                b: (255 - PIGMENTS.GREEN.b) * (1 - mixRatio) + (255 - PIGMENTS.BLUE.b) * mixRatio
+        function mix(ratio, white, black) {
+            const mI = {
+                r: (255 - PIGMENTS.GREEN.r) * (1 - ratio) + (255 - PIGMENTS.BLUE.r) * ratio,
+                g: (255 - PIGMENTS.GREEN.g) * (1 - ratio) + (255 - PIGMENTS.BLUE.g) * ratio,
+                b: (255 - PIGMENTS.GREEN.b) * (1 - ratio) + (255 - PIGMENTS.BLUE.b) * ratio
             };
+            const wI = { r: 255 - PIGMENTS.WHITE.r, g: 255 - PIGMENTS.WHITE.g, b: 255 - PIGMENTS.WHITE.b };
+            const bI = { r: 255 - PIGMENTS.BLACK.r, g: 255 - PIGMENTS.BLACK.g, b: 255 - PIGMENTS.BLACK.b };
 
-            const whiteInv = { r: 255 - PIGMENTS.WHITE.r, g: 255 - PIGMENTS.WHITE.g, b: 255 - PIGMENTS.WHITE.b };
-            const blackInv = { r: 255 - PIGMENTS.BLACK.r, g: 255 - PIGMENTS.BLACK.g, b: 255 - PIGMENTS.BLACK.b };
-
-            // Apply modifiers
-            const finalInv = {
-                r: mixInv.r * (1 - whiteAmount - blackAmount) + (whiteInv.r * whiteAmount) + (blackInv.r * blackAmount),
-                g: mixInv.g * (1 - whiteAmount - blackAmount) + (whiteInv.g * whiteAmount) + (blackInv.g * blackAmount),
-                b: mixInv.b * (1 - whiteAmount - blackAmount) + (whiteInv.b * whiteAmount) + (blackInv.b * blackAmount)
+            const fI = {
+                r: mI.r * (1 - white - black) + (wI.r * white) + (bI.r * black),
+                g: mI.g * (1 - white - black) + (wI.g * white) + (bI.g * black),
+                b: mI.b * (1 - white - black) + (wI.b * white) + (bI.b * black)
             };
 
             return {
-                r: Math.max(0, Math.min(255, Math.round(255 - finalInv.r))),
-                g: Math.max(0, Math.min(255, Math.round(255 - finalInv.g))),
-                b: Math.max(0, Math.min(255, Math.round(255 - finalInv.b)))
+                r: Math.max(0, Math.min(255, Math.round(255 - fI.r))),
+                g: Math.max(0, Math.min(255, Math.round(255 - fI.g))),
+                b: Math.max(0, Math.min(255, Math.round(255 - fI.b)))
             };
         }
 
-        function getNextTrial() {
-            // Cycle through tiers
-            const tierIdx = currentTrial % TIERS.length;
-            const tier = TIERS[tierIdx];
-            const bounds = tierBounds[tierIdx];
+        function pickTier() {
+            // Pick from tiers with the lowest trial count
+            const minCount = Math.min(...tierData.map(d => d.count));
+            const candidates = [];
+            tierData.forEach((d, i) => { if (d.count === minCount) candidates.push(i); });
+            return candidates[Math.floor(Math.random() * candidates.length)];
+        }
 
-            // Option D: Biased sampling
-            // In the first few rounds, go wider. Later, narrow in on bounds.
+        function spawnTrial() {
+            const idx = pickTier();
+            const tier = TIERS[idx];
+            const data = tierData[idx];
+
             let ratio;
-            if (currentTrial < 3) {
-                // Calibration phase
-                ratio = [0.1, 0.9, 0.5][currentTrial];
+            if (data.count === 0) {
+                ratio = 0.5; // Start middle
             } else {
-                // Focus near current estimated midpoint with 20% jitter
-                const mid = (bounds.min + bounds.max) / 2;
-                const range = (bounds.max - bounds.min);
-                ratio = mid + (Math.random() - 0.5) * range;
+                const range = data.max - data.min;
+                const jitter = (Math.random() - 0.5) * (range * 0.4); 
+                ratio = ((data.min + data.max) / 2) + jitter;
             }
 
             ratio = Math.max(0.05, Math.min(0.95, ratio));
             const color = mix(ratio, tier.w, tier.b);
-            return { ratio, tierIdx, color, hex: rgbToHex(color) };
-        }
+            const hex = "#" + [color.r, color.g, color.b].map(x => x.toString(16).padStart(2, '0')).join("");
 
-        let activeTrial = null;
-
-        function updateDisplay() {
-            activeTrial = getNextTrial();
-            document.documentElement.style.setProperty('--bg-color', activeTrial.hex);
-            document.getElementById('progress').innerText = `Trial ${currentTrial + 1} / ${MAX_TRIALS}`;
+            activeTrial = { idx, ratio, hex, tierName: tier.name };
+            
+            document.documentElement.style.setProperty('--bg-color', hex);
+            document.getElementById('tier-name').innerText = tier.name;
+            document.getElementById('progress').innerText = `Trial ${history.length + 1} / ${MAX_TRIALS}`;
         }
 
         function recordVote(choice) {
-            const t = activeTrial;
-            trials.push({ ...t, choice });
-
-            // Update Tier Bounds (Non-linear dampening for "I'm Not Sure")
-            const bounds = tierBounds[t.tierIdx];
+            const d = tierData[activeTrial.idx];
+            
+            // Fuzzy logic update
             if (choice === 'green') {
-                // If they say green, the boundary is at least this blue
-                bounds.min = Math.max(bounds.min, t.ratio * 0.85); 
+                d.min = Math.max(d.min, activeTrial.ratio * 0.9);
             } else if (choice === 'blue') {
-                // If they say blue, the boundary is at least this green
-                bounds.max = Math.min(bounds.max, 1 - (1 - t.ratio) * 0.85);
+                d.max = Math.min(d.max, 1 - (1 - activeTrial.ratio) * 0.9);
             } else {
-                // "Unsure" nudges both slightly inward but doesn't lock them
-                bounds.min = Math.max(bounds.min, t.ratio - 0.1);
-                bounds.max = Math.min(bounds.max, t.ratio + 0.1);
+                // Unsure pulls bounds in much more gently
+                d.min = Math.max(d.min, activeTrial.ratio - 0.15);
+                d.max = Math.min(d.max, activeTrial.ratio + 0.15);
             }
 
-            addHistoryRow(t, choice);
-            currentTrial++;
+            d.count++;
+            addHistoryRow(activeTrial, choice, { ...d });
+            history.push({ ...activeTrial, choice });
 
-            if (currentTrial >= MAX_TRIALS) finish();
-            else updateDisplay();
+            if (history.length >= MAX_TRIALS) finish();
+            else spawnTrial();
         }
 
-        function addHistoryRow(t, choice) {
+        function addHistoryRow(trial, choice, boundaryState) {
             const list = document.getElementById('history-list');
             const row = document.createElement('div');
-            row.className = 'history-grid';
-            const tierName = TIERS[t.tierIdx].name.split(' ')[0];
-            const colorLabel = choice === 'unsure' ? '#aaa' : (choice === 'green' ? 'var(--phtalo-green)' : 'var(--cobalt-blue)');
+            row.className = 'history-row';
             
+            const choiceColor = choice === 'green' ? 'var(--phtalo-green)' : (choice === 'blue' ? 'var(--cobalt-blue)' : '#777');
+            const left = boundaryState.min * 100;
+            const width = (boundaryState.max - boundaryState.min) * 100;
+
             row.innerHTML = `
-                <div style="opacity:0.5">#${currentTrial+1}</div>
-                <div style="font-size:0.7rem">${tierName}</div>
-                <div class="swatch" style="background:${t.hex}"></div>
-                <div style="color:${colorLabel}; font-weight:bold">${choice.toUpperCase()}</div>
+                <div style="font-size:0.65rem; opacity:0.6;">${trial.tierName}</div>
+                <div class="track-container">
+                    <div class="fuzzy-boundary" style="left: ${left}%; width: ${width}%;"></div>
+                    <div class="marker" style="left: ${trial.ratio * 100}%; background: ${trial.hex};"></div>
+                </div>
+                <div style="text-align:right; font-weight:bold; color:${choiceColor}">${choice.toUpperCase()}</div>
             `;
             list.prepend(row);
-        }
-
-        function calculateBoundaries() {
-            return TIERS.map((tier, idx) => {
-                const relevant = trials.filter(tr => tr.tierIdx === idx);
-                const greens = relevant.filter(r => r.choice === 'green').map(r => r.ratio);
-                const blues = relevant.filter(r => r.choice === 'blue').map(r => r.ratio);
-                
-                const highGreen = greens.length ? Math.max(...greens) : 0;
-                const lowBlue = blues.length ? Math.min(...blues) : 1;
-                
-                return (highGreen + lowBlue) / 2;
-            });
         }
 
         function finish() {
             document.getElementById('quiz-view').style.display = 'none';
             document.getElementById('result-view').style.display = 'block';
-            
-            const results = calculateBoundaries();
-            const manifold = document.getElementById('manifold-bars');
-            manifold.innerHTML = '';
+            const chart = document.getElementById('chart');
 
-            results.forEach((val, i) => {
+            tierData.forEach((d, i) => {
+                const finalRatio = (d.min + d.max) / 2;
+                const c = mix(finalRatio, TIERS[i].w, TIERS[i].b);
                 const bar = document.createElement('div');
-                bar.className = 'chart-bar';
-                bar.style.height = `${val * 100}%`;
-                // Color bar based on its own tier color
-                const c = mix(val, TIERS[i].w, TIERS[i].b);
-                bar.style.background = `rgb(${c.r}, ${c.g}, ${c.b})`;
-                bar.innerHTML = `<div class="chart-label">${TIERS[i].name}<br>${Math.round(val*100)}%</div>`;
-                manifold.appendChild(bar);
+                bar.className = 'bar';
+                bar.style.height = `${finalRatio * 100}%`;
+                bar.style.background = `rgb(${c.r},${c.g},${c.b})`;
+                bar.innerHTML = `<div class="bar-label">${TIERS[i].name}</div>`;
+                chart.appendChild(bar);
             });
         }
 
-        function rgbToHex(rgb) {
-            return "#" + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join("");
-        }
-
-        updateDisplay();
+        spawnTrial();
     </script>
 </body>
 </html>
