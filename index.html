@@ -128,7 +128,7 @@
             border: 1px solid #333; position: relative;
         }
         
-        .bar { width: 14%; position: relative; transition: height 0.8s; z-index: 2; }
+        .bar { width: 14%; position: relative; z-index: 2; border-radius: 4px; overflow: visible; }
         .bar-label { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.55rem; opacity: 0.7; white-space: nowrap; }
         .bar-percent { position: absolute; top: -22px; width: 100%; text-align: center; font-size: 0.75rem; font-weight: bold; }
         
@@ -139,9 +139,13 @@
         }
         .avg-label { position: absolute; right: 5px; font-size: 0.5rem; color: rgba(255,255,255,0.5); transform: translateY(-100%); }
 
-        /* Error Bars */
-        .error-bar { position: absolute; left: 50%; width: 2px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
-        .error-cap { position: absolute; left: 50%; width: 8px; height: 1px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
+        /* Boundary Line */
+        .boundary-line {
+            position: absolute; left: -10%; width: 120%; height: 2px;
+            background: white; z-index: 3; transform: translateY(50%);
+            box-shadow: 0 0 8px rgba(0,0,0,0.8);
+            transition: bottom 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
         #result-view { display: none; }
         #insight-text { font-size: 0.75rem; opacity: 0.8; margin-top: 45px; line-height: 1.5; padding: 0 10px; border-left: 2px solid #444; text-align: left; }
@@ -405,22 +409,34 @@
             tierData.forEach((d, i) => {
                 const midpoint = (d.min + d.max) / 2;
                 totalBoundaries += midpoint;
-                const c = mix(midpoint, TIERS[i].w, TIERS[i].b);
+                
+                // Get the colors for the spectrum
+                const cGreen = mix(0, TIERS[i].w, TIERS[i].b);
+                const cBlue = mix(1, TIERS[i].w, TIERS[i].b);
+                const colorGreen = `rgb(${cGreen.r},${cGreen.g},${cGreen.b})`;
+                const colorBlue = `rgb(${cBlue.r},${cBlue.g},${cBlue.b})`;
                 
                 const barWrapper = document.createElement('div');
                 barWrapper.className = 'bar';
-                barWrapper.style.height = `${midpoint * 100}%`;
-                barWrapper.style.background = `rgb(${c.r},${c.g},${c.b})`;
+                barWrapper.style.height = `100%`;
+                barWrapper.style.background = `linear-gradient(to top, ${colorGreen}, ${colorBlue})`;
                 
-                const errorBar = document.createElement('div');
-                errorBar.className = 'error-bar';
-                errorBar.style.height = `${(d.max - d.min) * 100}%`;
-                errorBar.style.bottom = `calc(100% - ${(d.max - midpoint) * 100}%)`;
-                errorBar.innerHTML = `<div class="error-cap" style="top:0"></div><div class="error-cap" style="bottom:0"></div>`;
+                const boundaryLine = document.createElement('div');
+                boundaryLine.className = 'boundary-line';
+                // Start at 0 for animation effect
+                boundaryLine.style.bottom = '0%';
                 
-                barWrapper.innerHTML = `<div class="bar-label">${TIERS[i].name}</div><div class="bar-percent">${Math.round(midpoint * 100)}%</div>`;
-                barWrapper.appendChild(errorBar);
+                barWrapper.innerHTML = `
+                    <div class="bar-label">${TIERS[i].name}</div>
+                    <div class="bar-percent">${Math.round(midpoint * 100)}%</div>
+                `;
+                barWrapper.appendChild(boundaryLine);
                 chart.appendChild(barWrapper);
+
+                // Trigger animation in next frame
+                setTimeout(() => {
+                    boundaryLine.style.bottom = `${midpoint * 100}%`;
+                }, 50);
             });
 
             const avg = totalBoundaries / TIERS.length;

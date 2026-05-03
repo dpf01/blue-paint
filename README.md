@@ -6,5 +6,7 @@ The website https://ismy.blue/ lets users judge colors from a spectrum between b
 
 I wanted a similar website where the choices bewteen blue and green are instead the colors you would experience if you mixed blue and green paint in varying proportions.
 
-Gemini did all the work: https://gemini.google.com/share/2ccfce1d8c3a
+Gemini did all the initial work: https://gemini.google.com/share/2ccfce1d8c3a
+
+I used the Gemini CLI for more recent commits.
 

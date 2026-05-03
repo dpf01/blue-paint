@@ -39,8 +39,8 @@ Because "teal" is a perceptual battleground, this tool uses a scientific approac
     *   Hovering over swatches reveals the exact blue-ward percentage.
 
 ### 4. Data Visualization & Insights
-*   **The Manifold Chart:** A vertical bar chart where the Y-axis represents the Blue/Green threshold ($0\% = Green, 100\% = Blue$).
-*   **Uncertainty Mapping:** Each bar features **Error Bars** (caps) representing the final remaining "fuzzy zone" for that tier.
+*   **The Manifold Chart:** A vertical visualization where each "tier" shows the full spectrum of possible mixes for that lightness level (from Green at the bottom to Blue at the top).
+*   **Perceptual Boundary:** A solid horizontal line indicates the exact point where the user's perception switched for each tier.
 *   **Drift Analysis:** Calculated by comparing the average threshold of "Tint" tiers vs. "Shade" tiers:
     *   **Shade-Drift:** Threshold is higher in shades (Perceiving darker tones as greener).
     *   **Tint-Drift:** Threshold is higher in tints (Perceiving lighter tones as greener).
